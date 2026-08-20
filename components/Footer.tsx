@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 export default function Footer() {
   const [siteName, setSiteName] = useState('BYTEZEY');
   const [footerDesc, setFooterDesc] = useState(
-    'แพลตฟอร์มจำหน่ายสินค้าและบริการดิจิทัลแบบอัตโนมัติ สะดวก รวดเร็ว การันตีความปลอดภัยและพร้อมซัพพอร์ตลูกค้าตลอด 24 ชั่วโมง'
+    'แพลตฟอร์มจำหน่ายระบบบอท เว็บไซต์สำเร็จรูป และบริการดิจิทัลอัตโนมัติ 24 ชั่วโมง'
   );
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const supabase = createClient();
@@ -32,13 +32,17 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           
-          {/* Brand Info */}
+          {/* Brand Info & Dynamic Logo */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-3">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="h-8 w-8 object-contain rounded-lg" />
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  className="h-10 w-10 object-contain rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.4)]" 
+                />
               ) : (
-                <div className="p-2 rounded-xl bg-blue-600/30 text-sky-400">
+                <div className="p-2.5 rounded-xl bg-blue-600/30 text-sky-400">
                   <Gamepad2 className="w-5 h-5" />
                 </div>
               )}
@@ -61,7 +65,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contacts / Guarantees */}
+          {/* Contacts */}
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">ช่องทางติดต่อ</h4>
             <div className="flex gap-4">
