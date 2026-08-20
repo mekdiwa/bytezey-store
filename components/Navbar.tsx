@@ -9,7 +9,6 @@ import {
   Wallet, 
   PlusCircle, 
   History, 
-  User as UserIcon, 
   LogOut, 
   Menu, 
   X 
@@ -121,12 +120,12 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'discord' })}
+                <Link
+                  href="/login"
                   className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all transform hover:-translate-y-0.5"
                 >
-                  เข้าสู่ระบบ
-                </button>
+                  เข้าสู่ระบบ / สมัครสมาชิก
+                </Link>
               </div>
             )}
           </div>
@@ -149,10 +148,19 @@ export default function Navbar() {
           <Link href="/" className="block py-2 text-slate-300 hover:text-sky-400">หน้าแรก</Link>
           <Link href="/topup" className="block py-2 text-slate-300 hover:text-sky-400">เติมเงิน</Link>
           <Link href="/history" className="block py-2 text-slate-300 hover:text-sky-400">ประวัติการซื้อ</Link>
-          {user && (
+          {user ? (
             <div className="pt-4 border-t border-blue-500/20 flex justify-between items-center">
               <span className="text-sky-400 font-bold">฿{Number(balance).toLocaleString()}</span>
               <button onClick={handleSignOut} className="text-red-400 text-sm">ออกจากระบบ</button>
+            </div>
+          ) : (
+            <div className="pt-4 border-t border-blue-500/20">
+              <Link 
+                href="/login" 
+                className="block text-center py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm"
+              >
+                เข้าสู่ระบบ / สมัครสมาชิก
+              </Link>
             </div>
           )}
         </div>
