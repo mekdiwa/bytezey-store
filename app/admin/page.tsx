@@ -1,0 +1,296 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { createClient } from '@/lib/supabase/client';
+import { UploadCloud, Plus, PackagePlus, Loader2, Layers } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
+
+export default function AdminPage() {
+  const supabase = createClient();
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Form States: เพิ่มสินค้า
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Form States: เติมสต็อก
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [stockItems, setStockItems] = useState('');
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    const { data: catData } = await supabase.from('categories').select('*');
+    if (catData) {
+      setCategories(catData);
+      if (catData.length > 0) setCategoryId(catData[0].id);
+    }
+
+    const { data: prodData } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (prodData) {
+      setProducts(prodData);
+      if (prodData.length > 0) setSelectedProduct(prodData[0].id);
+    }
+  };
+
+  // Logic: อัปโหลดรูปจากเครื่องขึ้น Supabase Storage และสร้างสินค้า
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!imageFile) {
+      toast.error('กรุณาเลือกรูปภาพสินค้าจากเครื่อง');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1. ตั้งชื่อไฟล์สุ่มป้องกันชื่อซ้ำ
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      // 2. อัปโหลดเข้า Storage Bucket "products"
+      const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      // 3. ขอ Public URL รูปภาพ
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      // 4. บันทึกลงตาราง products
+      const { error: insertError } = await supabase.from('products').insert({
+        name,
+        description,
+        price: parseFloat(price),
+        category_id: categoryId,
+        image_url: publicUrl,
+        is_active: true,
+      });
+
+      if (insertError) throw insertError;
+
+      toast.success('เพิ่มสินค้าและอัปโหลดรูปภาพเรียบร้อยแล้ว!');
+      setName('');
+      setDescription('');
+      setPrice('');
+      setImageFile(null);
+      fetchInitialData();
+    } catch (err: any) {
+      toast.error(err.message || 'เกิดข้อผิดพลาดในการเพิ่มสินค้า');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logic: เติมสต็อกรหัสสินค้า (1 บรรทัด = 1 ชิ้น)
+  const handleAddStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockItems.trim() || !selectedProduct) {
+      toast.error('กรุณากรอกข้อมูลสต็อก');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const lines = stockItems
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      const payload = lines.map((content) => ({
+        product_id: selectedProduct,
+        data_content: content,
+        is_sold: false,
+      }));
+
+      const { error } = await supabase.from('product_items').insert(payload);
+      if (error) throw error;
+
+      toast.success(`เติมสต็อกสำเร็จจำนวน ${lines.length} ชิ้น!`);
+      setStockItems('');
+    } catch (err: any) {
+      toast.error(err.message || 'เกิดข้อผิดพลาดในการเติมสต็อก');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-[#050814] text-slate-100 flex flex-col justify-between">
+      <Toaster position="top-right" richColors theme="dark" />
+      <div>
+        <Navbar />
+
+        <div className="max-w-5xl mx-auto px-4 py-12">
+          <div className="mb-10 text-center">
+            <h1 className="text-3xl font-black text-white flex items-center justify-center gap-3">
+              <Layers className="w-8 h-8 text-sky-400" />
+              ระบบจัดการหลังบ้าน (Bytezey Admin)
+            </h1>
+            <p className="text-xs text-slate-400 mt-2">
+              อัปโหลดรูปภาพสินค้าจากเครื่องและเติมสต็อกอัตโนมัติ
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* ฝั่งซ้าย: เพิ่มสินค้าและอัปโหลดรูป */}
+            <div className="p-6 rounded-2xl bg-[#0e1738] border border-blue-500/20 shadow-xl">
+              <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-sky-400" />
+                สร้างสินค้าใหม่
+              </h2>
+
+              <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">ชื่อสินค้า</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="เช่น ไอดี Valorant ปืนครบ"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white placeholder-slate-600 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">หมวดหมู่</label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white focus:outline-none focus:border-sky-400"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-[#0e1738] text-white">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">ราคา (บาท)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white placeholder-slate-600 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                {/* อัปโหลดรูปจากเครื่อง */}
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    เลือกรูปภาพสินค้าจากเครื่อง
+                  </label>
+                  <div className="relative border-2 border-dashed border-blue-500/30 rounded-xl p-4 text-center hover:border-sky-400 transition-colors bg-[#050814]/50">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      required
+                      onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <UploadCloud className="w-8 h-8 text-sky-400 mx-auto mb-2" />
+                    <p className="text-xs text-slate-300">
+                      {imageFile ? imageFile.name : 'คลิกเพื่อเลือกไฟล์รูปภาพ (PNG, JPG, WEBP)'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">คำอธิบาย</label>
+                  <textarea
+                    rows={2}
+                    placeholder="รายละเอียดสินค้า..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white placeholder-slate-600 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'บันทึกและอัปโหลดสินค้า'}
+                </button>
+              </form>
+            </div>
+
+            {/* ฝั่งขวา: เติมสต็อกรหัสสินค้า */}
+            <div className="p-6 rounded-2xl bg-[#0e1738] border border-blue-500/20 shadow-xl flex flex-col justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <PackagePlus className="w-5 h-5 text-sky-400" />
+                  เติมสต็อกสินค้า
+                </h2>
+
+                <form onSubmit={handleAddStock} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">เลือกสินค้า</label>
+                    <select
+                      value={selectedProduct}
+                      onChange={(e) => setSelectedProduct(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white focus:outline-none focus:border-sky-400"
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-[#0e1738] text-white">
+                          {p.name} (฿{p.price})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">
+                      รายการรหัส / ข้อมูลสินค้า (1 บรรทัด = 1 ชิ้น)
+                    </label>
+                    <textarea
+                      rows={8}
+                      required
+                      placeholder={"user1:pass1\nuser2:pass2\nREDEEM-CODE-1234"}
+                      value={stockItems}
+                      onChange={(e) => setStockItems(e.target.value)}
+                      className="w-full font-mono px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white placeholder-slate-600 focus:outline-none focus:border-sky-400"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ยืนยันการเติมสต็อก'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </main>
+  );
+}
