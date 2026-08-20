@@ -489,7 +489,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     required
-                    placeholder="เช่น YouTube Premium 1 เดือน, บัญชี Netflix"
+                    placeholder="เช่น บอท Telegram ตรวจจับยอด, เว็บสำเร็จรูป"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#050814] border border-blue-500/30 text-white placeholder-slate-600 focus:border-sky-400 outline-none"
