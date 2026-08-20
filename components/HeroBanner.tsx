@@ -1,19 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Zap, Flame, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HeroBanner() {
+  const supabase = createClient();
+  const [settings, setSettings] = useState<Record<string, string>>({
+    hero_badge: 'Bytezey Store — ระบบจัดส่งอัตโนมัติ 24 ชม.',
+    hero_title_1: 'ศูนย์รวมดิจิทัลไอเทม',
+    hero_title_2: 'และสินค้าดิจิทัลชั้นนำระดับพรีเมียม',
+    hero_description: 'ทำรายการรวดเร็ว ปลอดภัย ได้รับสินค้าทันทีหลังชำระเงิน พร้อมระบบสต็อกอัตโนมัติ 100%',
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('site_settings').select('*');
+      if (data) {
+        const mapped = data.reduce((acc: any, cur: any) => {
+          acc[cur.key] = cur.value;
+          return acc;
+        }, {});
+        setSettings((prev) => ({ ...prev, ...mapped }));
+      }
+    };
+    fetchSettings();
+  }, [supabase]);
+
   return (
     <div className="relative overflow-hidden pt-12 pb-20">
-      {/* Background Radial Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-600/20 blur-[140px] pointer-events-none -z-10 rounded-full" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        
-        {/* Animated Badge */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -21,28 +41,26 @@ export default function HeroBanner() {
         >
           <Sparkles className="w-4 h-4 text-sky-400 animate-pulse" />
           <span className="text-xs font-semibold uppercase tracking-wider text-sky-300">
-            Bytezey Store — ระบบจัดส่งอัตโนมัติ 24 ชม.
+            {settings.hero_badge}
           </span>
         </motion.div>
 
-        {/* Headline */}
         <motion.h1 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
           className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 leading-tight"
         >
-          ศูนย์รวมดิจิทัลไอเทม <br />
+          {settings.hero_title_1} <br />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-400 drop-shadow-[0_0_35px_rgba(56,189,248,0.6)]">
-            และไอดีเกมชั้นนำระดับพรีเมียม
+            {settings.hero_title_2}
           </span>
         </motion.h1>
 
         <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-400 mb-10">
-          ทำรายการรวดเร็ว ปลอดภัย ได้รับสินค้าทันทีหลังชำระเงิน พร้อมระบบสต็อกอัตโนมัติ 100%
+          {settings.hero_description}
         </p>
 
-        {/* Shimmer CTA Button */}
         <div className="flex justify-center gap-4 mb-16">
           <Link href="#store-inventory" className="relative inline-flex overflow-hidden rounded-xl p-[1px] focus:outline-none">
             <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#38bdf8_0%,#0e1738_50%,#38bdf8_100%)]" />
@@ -52,7 +70,6 @@ export default function HeroBanner() {
           </Link>
         </div>
 
-        {/* Store Highlights Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {[
             { icon: Zap, title: 'ส่งงานไวใน 1 วินาที', desc: 'ระบบบอทส่งรหัสทันทีหลังชำระเงิน' },
@@ -74,7 +91,6 @@ export default function HeroBanner() {
             </motion.div>
           ))}
         </div>
-
       </div>
     </div>
   );
