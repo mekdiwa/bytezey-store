@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Gamepad2, ShieldCheck, MessageSquare } from 'lucide-react';
+import { ShieldCheck, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function Footer() {
   const [siteName, setSiteName] = useState('BYTEZEY');
-  const [footerDesc, setFooterDesc] = useState(
-    'แพลตฟอร์มจำหน่ายระบบบอท เว็บไซต์สำเร็จรูป และบริการดิจิทัลอัตโนมัติ 24 ชั่วโมง'
-  );
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -19,8 +15,6 @@ export default function Footer() {
       if (data) {
         data.forEach((s) => {
           if (s.key === 'site_name') setSiteName(s.value);
-          if (s.key === 'footer_description') setFooterDesc(s.value);
-          if (s.key === 'site_logo_url') setLogoUrl(s.value);
         });
       }
     };
@@ -29,32 +23,9 @@ export default function Footer() {
 
   return (
     <footer className="w-full bg-[#03060f] border-t border-blue-500/20 text-slate-400 text-xs mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
           
-          {/* Brand Info & Dynamic Logo */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-3">
-              {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt="Logo" 
-                  className="h-10 w-10 object-contain rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.4)]" 
-                />
-              ) : (
-                <div className="p-2.5 rounded-xl bg-blue-600/30 text-sky-400">
-                  <Gamepad2 className="w-5 h-5" />
-                </div>
-              )}
-              <span className="text-xl font-bold tracking-wider text-white">
-                {siteName}
-              </span>
-            </Link>
-            <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
-              {footerDesc}
-            </p>
-          </div>
-
           {/* Quick Links */}
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">บริการของเรา</h4>
@@ -79,12 +50,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-blue-500/10 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-slate-500">
+        <div className="pt-6 border-t border-blue-500/10 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-slate-500">
           <p>© 2026 {siteName} Store. All rights reserved.</p>
-          <p>Built with ❤️ for Gamers</p>
+          <p>ระบบจัดส่งสินค้าอัตโนมัติ 24 ชม.</p>
         </div>
       </div>
     </footer>
   );
 }
- 
