@@ -23,7 +23,6 @@ export default function TopupPage() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
     if (user) {
-      // ดึงยอดเงินปัจจุบัน
       const { data: profile } = await supabase
         .from('profiles')
         .select('balance')
@@ -31,7 +30,6 @@ export default function TopupPage() {
         .single();
       if (profile) setBalance(profile.balance || 0);
 
-      // ดึงประวัติการเติมเงิน
       const { data: txData } = await supabase
         .from('transactions')
         .select('*')
@@ -55,23 +53,28 @@ export default function TopupPage() {
 
     try {
       setLoading(true);
-      // ยิงตรงเข้า API /api/topup/voucher
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || '';
+
       const res = await fetch('/api/topup/voucher', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           voucherUrl: voucherUrl.trim(),
-          voucher_url: voucherUrl.trim(), // รองรับทั้งสองรูปแบบคีย์
+          userId: user.id
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        throw new Error(data.error || data.message || 'เติมเงินไม่สำเร็จ');
+        throw new Error(data.error || 'เติมเงินไม่สำเร็จ');
       }
 
-      toast.success(data.message || `เติมเงินสำเร็จจำนวน ฿${data.amount || ''} บาท`);
+      toast.success(data.message || `เติมเงินสำเร็จ +฿${data.amount} บาท`);
       setVoucherUrl('');
       fetchUserData();
     } catch (err: any) {
