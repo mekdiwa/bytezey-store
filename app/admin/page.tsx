@@ -1,14 +1,31 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { createClient } from '@/lib/supabase/client';
-import { UploadCloud, Plus, PackagePlus, Loader2, Layers, Settings, Save, FolderPlus, Trash2 } from 'lucide-react';
+import { 
+  UploadCloud, 
+  Plus, 
+  PackagePlus, 
+  Loader2, 
+  Layers, 
+  Settings, 
+  Save, 
+  FolderPlus, 
+  Trash2, 
+  ShieldAlert
+} from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 export default function AdminPage() {
   const supabase = createClient();
+  const router = useRouter();
+  
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,25 +57,54 @@ export default function AdminPage() {
   const [stockItems, setStockItems] = useState('');
 
   useEffect(() => {
-    fetchInitialData();
+    checkAdminRole();
   }, []);
 
+  const checkAdminRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('กรุณาเข้าสู่ระบบก่อน');
+        router.push('/login');
+        return;
+      }
+
+      // เช็คว่า User นี้มี role เป็น admin บน Supabase หรือไม่
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error || profile?.role !== 'admin') {
+        toast.error('คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะ Admin เท่านั้น)');
+        setIsAdmin(false);
+        setCheckingAuth(false);
+        return;
+      }
+
+      setIsAdmin(true);
+      fetchInitialData();
+    } catch (err) {
+      router.push('/');
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
   const fetchInitialData = async () => {
-    // 1. ดึงหมวดหมู่
     const { data: catData } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
     if (catData) {
       setCategories(catData);
       if (catData.length > 0 && !categoryId) setCategoryId(catData[0].id);
     }
 
-    // 2. ดึงสินค้า
     const { data: prodData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (prodData) {
       setProducts(prodData);
       if (prodData.length > 0 && !selectedProduct) setSelectedProduct(prodData[0].id);
     }
 
-    // 3. ดึงการตั้งค่าทั้งหมด
     const { data: setData } = await supabase.from('site_settings').select('*');
     if (setData) {
       setData.forEach((item: any) => {
@@ -75,7 +121,6 @@ export default function AdminPage() {
     }
   };
 
-  // Logic 1: บันทึกข้อความ & อัปโหลดโลโก้ร้าน
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -119,7 +164,6 @@ export default function AdminPage() {
     }
   };
 
-  // Logic 2: สร้างหมวดหมู่ใหม่
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
@@ -145,7 +189,6 @@ export default function AdminPage() {
     }
   };
 
-  // Logic 3: ลบหมวดหมู่
   const handleDeleteCategory = async (id: string, name: string) => {
     if (!confirm(`คุณต้องการลบหมวดหมู่ "${name}" ใช่หรือไม่?`)) return;
 
@@ -162,7 +205,6 @@ export default function AdminPage() {
     }
   };
 
-  // Logic 4: สร้างสินค้าใหม่ + อัปโหลดรูปภาพสินค้า
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!imageFile) {
@@ -205,7 +247,6 @@ export default function AdminPage() {
     }
   };
 
-  // Logic 5: เติมสต็อกรหัสสินค้า
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockItems.trim() || !selectedProduct) {
@@ -233,6 +274,36 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-[#050814] flex items-center justify-center text-white">
+        <Loader2 className="w-8 h-8 animate-spin text-sky-400" />
+      </main>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#050814] text-slate-100 flex flex-col justify-between">
+        <Navbar />
+        <div className="max-w-md mx-auto px-4 py-24 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h1 className="text-xl font-bold text-white mb-2">ปฏิเสธการเข้าถึง (403 Forbidden)</h1>
+          <p className="text-xs text-slate-400 mb-6">บัญชีของคุณไม่มีสิทธิ์ผู้ดูแลระบบ (Admin) บนระบบฐานข้อมูล</p>
+          <button
+            onClick={() => router.push('/')}
+            className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all"
+          >
+            กลับสู่หน้าหลัก
+          </button>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#050814] text-slate-100 flex flex-col justify-between">
@@ -361,7 +432,7 @@ export default function AdminPage() {
             </form>
           </div>
 
-          {/* 2. แผงจัดการหมวดหมู่ (เพิ่ม / ลบ หมวดหมู่ที่ไม่ต้องการ) */}
+          {/* 2. แผงจัดการหมวดหมู่ */}
           <div className="mb-10 p-6 rounded-2xl bg-[#0e1738] border border-blue-500/20 shadow-xl">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <FolderPlus className="w-5 h-5 text-sky-400" />
