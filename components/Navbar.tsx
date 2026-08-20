@@ -8,7 +8,6 @@ import {
   Gamepad2, 
   Wallet, 
   PlusCircle, 
-  History, 
   LogOut, 
   Menu, 
   X 
@@ -18,11 +17,14 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [balance, setBalance] = useState<number>(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [siteName, setSiteName] = useState<string>('BYTEZEY');
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    const getUserData = async () => {
+    const fetchData = async () => {
+      // ดึงข้อมูล User & Balance
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
@@ -33,10 +35,19 @@ export default function Navbar() {
           .single();
         if (data) setBalance(data.balance);
       }
-    };
-    getUserData();
 
-    // Subscribe to balance realtime updates
+      // ดึงโลโก้และชื่อเว็บ
+      const { data: settings } = await supabase.from('site_settings').select('*');
+      if (settings) {
+        settings.forEach((s) => {
+          if (s.key === 'site_logo_url') setLogoUrl(s.value);
+          if (s.key === 'site_name') setSiteName(s.value);
+        });
+      }
+    };
+    fetchData();
+
+    // Realtime Balance
     if (user) {
       const channel = supabase
         .channel(`profile-${user.id}`)
@@ -67,13 +78,21 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
-          {/* Logo */}
+          {/* Logo & Site Name */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="p-2.5 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.5)] transition-transform group-hover:scale-105">
-              <Gamepad2 className="w-6 h-6 text-white" />
-            </div>
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                className="h-10 w-10 object-contain rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.5)] transition-transform group-hover:scale-105" 
+              />
+            ) : (
+              <div className="p-2.5 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.5)] transition-transform group-hover:scale-105">
+                <Gamepad2 className="w-6 h-6 text-white" />
+              </div>
+            )}
             <span className="text-2xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]">
-              BYTEZEY
+              {siteName}
             </span>
           </Link>
 
